@@ -69,13 +69,23 @@ jobs:
             echo "Source boot image is empty"
         fi
   
-    - name: Setup KernelSU Next
+    - name: Setup BakaSU (ReSukiSU, UAPI 4)
       if: env.ENABLE_KERNELSU == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
-        KSU_VERSION=$(cd KernelSU-Next && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
-        echo "UPLOADNAME=-KernelSU_$KSU_VERSION" >> $GITHUB_ENV
+        git clone https://github.com/Baka-SU/BakaSU.git KernelSU
+        sh KernelSU/kernel/setup.sh
+        python3 $GITHUB_WORKSPACE/apply-bakasu-hooks.py
+        KSU_VERSION=$(cd KernelSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 + 700)
+        echo "UPLOADNAME=-BakaSU_$KSU_VERSION" >> $GITHUB_ENV
+        {
+          echo "CONFIG_KSU=y"
+          echo "CONFIG_KSU_MANUAL_HOOK=y"
+          echo "CONFIG_KALLSYMS_ALL=y"
+          echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y"
+        } >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
+        echo "--- KSU config injected ---"
+        grep -E "CONFIG_KSU|CONFIG_KALLSYMS_ALL" arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
 
     - name: Setup Configuration for Kernel
       run: |
@@ -155,6 +165,7 @@ jobs:
             cp android-kernel/out/arch/${{ env.ARCH }}/boot/dtbo.img AnyKernel3/
         fi
         rm -rf AnyKernel3/.git* AnyKernel3/README.md
+        cp $GITHUB_WORKSPACE/manager.apk AnyKernel3/
 
     - name: Make boot image
       if: env.HAVE_SOURCE_BOOT_IMAGE == 'true' && env.CHECK_FILE_IS_OK == 'true'
@@ -182,6 +193,13 @@ jobs:
       with:
         name: AnyKernel3${{ env.UPLOADNAME }}-${{ env.DEVICE }}-${{ env.BUILD_TIME }}
         path: kernel_workspace/AnyKernel3/*
+
+    - name: Upload manager APK
+      if: env.CHECK_FILE_IS_OK == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: manager-apk
+        path: manager.apk
 
     - name: Upload DTBO image
       if: env.CHECK_DTBO_IS_OK == 'true'
