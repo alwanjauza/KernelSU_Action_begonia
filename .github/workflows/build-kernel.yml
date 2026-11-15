@@ -83,8 +83,6 @@ jobs:
           echo "CONFIG_KSU_MANUAL_HOOK=y"
           echo "CONFIG_KALLSYMS_ALL=y"
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y"
-          echo "# CONFIG_CC_STACKPROTECTOR_STRONG is not set"
-          echo "CONFIG_CC_STACKPROTECTOR_NONE=y"
         } >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
         echo "--- KSU config injected ---"
         grep -E "CONFIG_KSU|CONFIG_KALLSYMS_ALL" arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
